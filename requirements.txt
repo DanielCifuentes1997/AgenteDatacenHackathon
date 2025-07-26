@@ -1,0 +1,9 @@
+google-generativeai
+flask
+flask_session
+markdown
+python-dotenv
+PyMuPDF
+gunicorn
+pandas
+plotly
