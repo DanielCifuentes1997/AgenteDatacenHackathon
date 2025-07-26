@@ -12,81 +12,135 @@
             justify-content: center;
             min-height: 100vh;
             background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .register-card {
             width: 100%;
-            max-width: 600px;
-            padding: 2rem;
+            max-width: 650px;
             background: white;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .card-header {
+            background-color: #212529;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .card-header img {
+            height: 50px;
+        }
+        .orange-divider {
+            height: 5px;
+            background-color: #fd7e14;
+        }
+        .card-body {
+            padding: 2.5rem;
+        }
+        .card-footer {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .card-footer img {
+            height: 25px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+            border-color: #86b7fe;
+        }
+        .btn-custom {
+            background-color: #212529;
+            border-color: #212529;
+            color: #fd7e14;
+            padding: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .btn-custom:hover {
+            background-color: #343a40;
+            color: #ffffff;
         }
     </style>
 </head>
 <body>
     <div class="register-card">
-        <div class="text-center mb-4">
-            <img src="{{ url_for('static', filename='datacen_logo.png') }}" alt="Logo de Datacen" style="height: 60px;">
-            <h2 class="mt-3">Bienvenido al Asistente de INGE LEAN</h2>
-            <p class="text-muted">Por favor, completa tus datos para comenzar.</p>
+        <div class="card-header">
+            <img src="{{ url_for('static', filename='logoingelean.png') }}" alt="Logo de INGE LEAN">
         </div>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}" role="alert">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <div class="orange-divider"></div>
+        <div class="card-body">
+            <div class="text-center mb-4">
+                <h2 class="mt-2">Bienvenido al Asistente Virtual</h2>
+                <p class="text-muted">Por favor, completa tus datos para comenzar.</p>
+            </div>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
-        <form method="POST" action="{{ url_for('register') }}">
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="full_name" class="form-label">Nombre Completo</label>
-                    <input type="text" class="form-control" id="full_name" name="full_name" required>
+            <form method="POST" action="{{ url_for('register') }}">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="full_name" class="form-label">Nombre Completo</label>
+                        <input type="text" class="form-control" id="full_name" name="full_name" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="cedula" class="form-label">Cédula</label>
+                        <input type="text" class="form-control" id="cedula" name="cedula" required pattern="\d+" title="Solo se admiten números.">
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="cedula" class="form-label">Cédula</label>
-                    <input type="text" class="form-control" id="cedula" name="cedula" required pattern="\d+" title="Solo se admiten números.">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="age" class="form-label">Edad</label>
+                        <input type="number" class="form-control" id="age" name="age" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="email" class="form-label">Correo Electrónico</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="age" class="form-label">Edad</label>
-                    <input type="number" class="form-control" id="age" name="age" required>
+                 <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="phone" class="form-label">Teléfono</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" required pattern="\d+" title="Solo se admiten números.">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="city" class="form-label">Ciudad</label>
+                        <input type="text" class="form-control" id="city" name="city" required>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="email" class="form-label">Correo Electrónico</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
+                <div class="mb-3">
+                    <label class="form-label">¿Ya eres cliente nuestro?</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="is_client" id="is_client_yes" value="yes" required>
+                        <label class="form-check-label" for="is_client_yes">Sí</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="is_client" id="is_client_no" value="no">
+                        <label class="form-check-label" for="is_client_no">No</label>
+                    </div>
                 </div>
-            </div>
-             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="phone" class="form-label">Teléfono</label>
-                    <input type="tel" class="form-control" id="phone" name="phone" required pattern="\d+" title="Solo se admiten números.">
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-custom">Iniciar Chat</button>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label for="city" class="form-label">Ciudad</label>
-                    <input type="text" class="form-control" id="city" name="city" required>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">¿Ya eres cliente nuestro?</label>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="is_client" id="is_client_yes" value="yes" required>
-                    <label class="form-check-label" for="is_client_yes">Sí</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="is_client" id="is_client_no" value="no">
-                    <label class="form-check-label" for="is_client_no">No</label>
-                </div>
-            </div>
-            <div class="d-grid">
-                <button type="submit" class="btn btn-primary">Iniciar Chat</button>
-            </div>
-        </form>
+            </form>
+        </div>
+        <div class="card-footer">
+            Desarrollado por Datacen
+            <img src="{{ url_for('static', filename='datacen_logo.png') }}" alt="Logo de Datacen">
+        </div>
     </div>
 </body>
 </html>

@@ -69,42 +69,34 @@ MAX_HISTORY = 5
 @app.route("/", methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        # --- CORRECCIÓN EN LA VALIDACIÓN ---
-        # 1. Recoger todos los campos del formulario
-        full_name = request.form.get('full_name')
-        cedula = request.form.get('cedula')
-        age = request.form.get('age')
-        email = request.form.get('email')
-        phone = request.form.get('phone')
-        city = request.form.get('city')
-        is_client_value = request.form.get('is_client') # Esto será 'yes', 'no', o None
-
-        # 2. Validar que ningún campo esté vacío
-        if not all([full_name, cedula, age, email, phone, city, is_client_value]):
+        user_data = {
+            "full_name": request.form.get('full_name'), "cedula": request.form.get('cedula'),
+            "age": request.form.get('age'), "email": request.form.get('email'),
+            "phone": request.form.get('phone'), "city": request.form.get('city'),
+            "is_client": request.form.get('is_client') == 'yes'
+        }
+        
+        # --- VALIDACIÓN CORREGIDA ---
+        # 1. Verificar que los campos de texto no estén vacíos
+        text_fields = {k: v for k, v in user_data.items() if k != 'is_client'}
+        if not all(text_fields.values()):
             flash("Todos los campos son obligatorios.", "danger")
             return render_template("register.html")
-        
-        # 3. Validar campos numéricos
-        if not cedula.isdigit() or not phone.isdigit():
-            flash("La cédula y el teléfono solo deben contener números.", "danger")
+            
+        # 2. Verificar que se haya seleccionado una opción para 'is_client'
+        if request.form.get('is_client') is None:
+            flash("Por favor, selecciona si eres cliente o no.", "danger")
             return render_template("register.html")
 
-        # 4. Si todo es correcto, construir el diccionario de datos
-        user_data = {
-            "full_name": full_name,
-            "cedula": cedula,
-            "age": age,
-            "email": email,
-            "phone": phone,
-            "city": city,
-            "is_client": is_client_value == 'yes' # Ahora la comparación es segura
-        }
+        # 3. Verificar que cédula y teléfono sean numéricos
+        if not user_data["cedula"].isdigit() or not user_data["phone"].isdigit():
+            flash("La cédula y el teléfono solo deben contener números.", "danger")
+            return render_template("register.html")
         # --- FIN DE LA CORRECCIÓN ---
 
         session['user_data'] = user_data
         session["history"] = []
         return redirect(url_for('chat'))
-        
     return render_template("register.html")
 
 @app.route("/chat")
@@ -144,30 +136,50 @@ def dashboard():
         return render_template('dashboard.html', error="No se ha generado ningún log todavía.")
     if not log_data:
         return render_template('dashboard.html', error="El archivo de logs está vacío.")
+    
     df = pd.DataFrame(log_data)
+    
+    # Extraer y aplanar los datos del usuario
     if 'user_info' in df.columns:
         df_users = pd.json_normalize(df['user_info'])
         df = pd.concat([df.drop('user_info', axis=1), df_users], axis=1)
+
+    # --- NUEVA LÓGICA PARA GRÁFICO DE CLIENTES ---
+    graph_clients_html = ""
+    if 'is_client' in df.columns:
+        client_counts = df['is_client'].value_counts().reset_index()
+        client_counts.columns = ['is_client', 'count']
+        client_counts['is_client'] = client_counts['is_client'].map({True: 'Clientes', False: 'No Clientes'})
+        fig_clients = px.pie(client_counts, values='count', names='is_client', 
+                             title='Distribución de Usuarios', color_discrete_map={'Clientes':'#007bff','No Clientes':'#6c757d'})
+        graph_clients_html = fig_clients.to_html(full_html=False)
+    # --- FIN DE LA NUEVA LÓGICA ---
+
     avg_rating = df['rating'].mean()
     rating_counts = df['rating'].value_counts().reset_index()
     rating_counts.columns = ['rating', 'count']
     fig_ratings = px.pie(rating_counts, values='count', names='rating', title='Distribución de Calificaciones')
     graph_ratings_html = fig_ratings.to_html(full_html=False)
+
     sentiments = [turn.get('sentiment', 'desconocido') for conv in df['conversation'] for turn in conv]
     sentiment_counts = pd.Series(sentiments).value_counts().reset_index()
     sentiment_counts.columns = ['sentiment', 'count']
     fig_sentiments = px.bar(sentiment_counts, x='sentiment', y='count', title='Frecuencia de Sentimientos', color='sentiment')
     graph_sentiments_html = fig_sentiments.to_html(full_html=False)
+
     total_conversations = len(df)
     df['turn_count'] = df['conversation'].apply(len)
     avg_turns = df['turn_count'].mean()
+    
     conversations_data = df.to_dict(orient='records')
+
     return render_template('dashboard.html',
                            total_conversations=total_conversations,
                            avg_rating=f"{avg_rating:.2f}",
                            avg_turns=f"{avg_turns:.2f}",
                            graph_ratings_html=graph_ratings_html,
                            graph_sentiments_html=graph_sentiments_html,
+                           graph_clients_html=graph_clients_html, # Pasar el nuevo gráfico
                            conversations_data=conversations_data)
 
 # --- RUTAS DE CHAT ---
