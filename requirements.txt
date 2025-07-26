@@ -7,3 +7,4 @@ PyMuPDF
 gunicorn
 pandas
 plotly
+Flask-Mail
