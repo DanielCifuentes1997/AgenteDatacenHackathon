@@ -1,6 +1,6 @@
 """
 Aplicación web con Flask. Agente de IA experto basado en un documento PDF.
-Implementa registro de usuario, dashboard, login y envío de correo.
+Implementa registro de usuario, dashboard, login y envío de correo con adjunto.
 """
 
 from dotenv import load_dotenv
@@ -69,21 +69,42 @@ MAX_HISTORY = 5
 @app.route("/", methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        user_data = {
-            "full_name": request.form.get('full_name'), "cedula": request.form.get('cedula'),
-            "age": request.form.get('age'), "email": request.form.get('email'),
-            "phone": request.form.get('phone'), "city": request.form.get('city'),
-            "is_client": request.form.get('is_client') == 'yes'
-        }
-        if not all(user_data.values()):
+        # --- CORRECCIÓN EN LA VALIDACIÓN ---
+        # 1. Recoger todos los campos del formulario
+        full_name = request.form.get('full_name')
+        cedula = request.form.get('cedula')
+        age = request.form.get('age')
+        email = request.form.get('email')
+        phone = request.form.get('phone')
+        city = request.form.get('city')
+        is_client_value = request.form.get('is_client') # Esto será 'yes', 'no', o None
+
+        # 2. Validar que ningún campo esté vacío
+        if not all([full_name, cedula, age, email, phone, city, is_client_value]):
             flash("Todos los campos son obligatorios.", "danger")
             return render_template("register.html")
-        if not user_data["cedula"].isdigit() or not user_data["phone"].isdigit():
+        
+        # 3. Validar campos numéricos
+        if not cedula.isdigit() or not phone.isdigit():
             flash("La cédula y el teléfono solo deben contener números.", "danger")
             return render_template("register.html")
+
+        # 4. Si todo es correcto, construir el diccionario de datos
+        user_data = {
+            "full_name": full_name,
+            "cedula": cedula,
+            "age": age,
+            "email": email,
+            "phone": phone,
+            "city": city,
+            "is_client": is_client_value == 'yes' # Ahora la comparación es segura
+        }
+        # --- FIN DE LA CORRECCIÓN ---
+
         session['user_data'] = user_data
         session["history"] = []
         return redirect(url_for('chat'))
+        
     return render_template("register.html")
 
 @app.route("/chat")
@@ -173,14 +194,24 @@ def rate():
                     email_html += f"<div><b>Asistente:</b> {item['response_html']}</div><br>"
                 
                 msg = Message(
-                    subject="Transcripción de tu chat con el Asistente INGE LEAN",
-                    # --- CORRECCIÓN: Se añade el remitente del correo ---
+                    subject="Transcripción y Brochure de INGE LEAN",
                     sender=app.config['MAIL_USERNAME'],
                     recipients=[user_data.get('email')], 
                     html=email_html
                 )
+
+                try:
+                    with app.open_resource("static/Brochure-Ingelean.pdf") as fp:
+                        msg.attach(
+                            "Brochure-Ingelean.pdf",
+                            "application/pdf",
+                            fp.read()
+                        )
+                except Exception as e:
+                    print(f"Error al adjuntar el PDF: {e}")
+
                 mail.send(msg)
-                flash("¡Gracias por tu calificación! Te hemos enviado una copia del chat a tu correo.", "success")
+                flash("¡Gracias por tu calificación! Te hemos enviado una copia del chat y nuestro brochure a tu correo.", "success")
             except Exception as e:
                 print(f"Error al enviar el correo: {e}")
                 flash("¡Gracias por tu calificación! No pudimos enviar la copia del chat.", "warning")
@@ -194,12 +225,32 @@ def rate():
 def predict():
     if 'user_data' not in session:
         return redirect(url_for('register'))
-    if not COMPANY_KNOWLEDGE:
-        return render_template("index.html", error="La base de conocimiento no está disponible.", history=session.get("history", []))
+        
     prompt = request.form.get("prompt")
-    if not prompt:
-        return render_template("index.html", error="Por favor, ingresa un texto válido.", history=session.get("history", []))
     history = session.get("history", [])
+
+    if prompt == "<<<FINALIZAR_CHAT>>>":
+        goodbye_text = """¡Muchas gracias por contactarnos! Ha sido un placer ayudarte. 
+        <br><br>
+        Puedes descargar nuestro brochure completo con más información aquí: 
+        <a href='/static/Brochure-Ingelean.pdf' target='_blank'>Descargar Brochure</a>."""
+        
+        history.append({
+            "prompt": "Finalizar conversación",
+            "response_raw": goodbye_text,
+            "response_html": goodbye_text,
+            "sentiment": "neutro" 
+        })
+        session["history"] = history
+        session['show_rating_modal'] = True
+        return redirect(url_for('chat'))
+
+    if not COMPANY_KNOWLEDGE:
+        return render_template("index.html", error="La base de conocimiento no está disponible.", history=history)
+    
+    if not prompt:
+        return render_template("index.html", error="Por favor, ingresa un texto válido.", history=history)
+
     sentiment = "neutro"
     try:
         sentiment_prompt = f'Analiza el sentimiento. Responde solo con: positivo, negativo, neutro. Texto: "{prompt}"'
@@ -209,6 +260,7 @@ def predict():
             sentiment = detected_sentiment
     except Exception as e:
         print(f"Error al analizar sentimiento: {e}")
+
     chat_history_context = "".join(f"Usuario: {item['prompt']}\nModelo: {item['response_raw']}\n" for item in history[-MAX_HISTORY:])
     
     specialized_prompt = f"""
