@@ -213,9 +213,9 @@ def rate():
                 )
 
                 try:
-                    with app.open_resource("static/Brochure-Ingelean.pdf") as fp:
+                    with app.open_resource("static/DataCen_portafolio.pdf") as fp:
                         msg.attach(
-                            "Brochure-Ingelean.pdf",
+                            "DataCen_portafolio",
                             "application/pdf",
                             fp.read()
                         )
@@ -223,7 +223,7 @@ def rate():
                     print(f"Error al adjuntar el PDF: {e}")
 
                 mail.send(msg)
-                flash("¡Gracias por tu calificación! Te hemos enviado una copia del chat y nuestro brochure a tu correo.", "success")
+                flash("¡Gracias por tu calificación! Te hemos enviado una copia del chat y nuestro portafolio a tu correo.", "success")
             except Exception as e:
                 print(f"Error al enviar el correo: {e}")
                 flash("¡Gracias por tu calificación! No pudimos enviar la copia del chat.", "warning")
